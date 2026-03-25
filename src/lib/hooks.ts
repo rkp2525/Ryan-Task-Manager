@@ -62,7 +62,7 @@ export async function addTask(
 
 export async function updateTask(
   id: string,
-  changes: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "dueDate" | "sortOrder">>
+  changes: Partial<Pick<Task, "title" | "description" | "status" | "priority" | "dueDate" | "sortOrder" | "isSticky" | "stickyX" | "stickyY">>
 ) {
   await db.tasks.update(id, {
     ...changes,
@@ -82,4 +82,29 @@ export async function deleteTask(id: string) {
 export async function toggleTaskStatus(id: string, currentStatus: TaskStatus) {
   const newStatus: TaskStatus = currentStatus === "done" ? "todo" : "done";
   await updateTask(id, { status: newStatus });
+}
+
+export function useStickyTasks(mode: Mode) {
+  return useLiveQuery(
+    () =>
+      db.tasks
+        .where("mode")
+        .equals(mode)
+        .filter((t) => !t.deletedAt && !!t.isSticky)
+        .toArray(),
+    [mode],
+    []
+  );
+}
+
+export async function setStickyPosition(id: string, x: number, y: number) {
+  await db.tasks.update(id, { stickyX: x, stickyY: y });
+}
+
+export async function makeSticky(id: string, x: number, y: number) {
+  await db.tasks.update(id, { isSticky: true, stickyX: x, stickyY: y });
+}
+
+export async function removeSticky(id: string) {
+  await db.tasks.update(id, { isSticky: false, stickyX: undefined, stickyY: undefined });
 }
