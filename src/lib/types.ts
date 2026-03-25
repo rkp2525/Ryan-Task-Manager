@@ -17,6 +17,9 @@ export interface Task {
   updatedAt: string;
   deletedAt?: string;
   pendingSync?: boolean;
+  isSticky?: boolean;
+  stickyX?: number;
+  stickyY?: number;
 }
 
 export const PRIORITY_LABELS: Record<Priority, string> = {

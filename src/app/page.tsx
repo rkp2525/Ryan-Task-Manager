@@ -8,6 +8,7 @@ import TaskForm from "@/components/TaskForm";
 import TaskList from "@/components/TaskList";
 import InstallButton from "@/components/InstallButton";
 import SyncStatus from "@/components/SyncStatus";
+import StickyNotesLayer from "@/components/StickyNotesLayer";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -37,6 +38,7 @@ export default function Home() {
         <TaskForm />
         <TaskList />
       </main>
+      <StickyNotesLayer />
       <InstallButton />
     </div>
   );
