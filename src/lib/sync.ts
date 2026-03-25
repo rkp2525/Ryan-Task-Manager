@@ -54,7 +54,7 @@ function toRemote(task: Task, userId: string): SupabaseTask {
 let lastSyncAt: string | null = null;
 
 export async function pushChanges(userId: string) {
-  const pending = await db.tasks.where("pendingSync").equals(1).toArray();
+  const pending = await db.tasks.filter((t) => t.pendingSync === true).toArray();
   if (pending.length === 0) return;
 
   const rows = pending.map((t) => toRemote(t, userId));
@@ -97,7 +97,7 @@ export async function pullChanges(userId: string) {
     }
   }
 
-  lastSyncAt = new Date().toISOString();
+  lastSyncAt = data.reduce((max, r) => (r as SupabaseTask).updated_at > max ? (r as SupabaseTask).updated_at : max, (data[0] as SupabaseTask).updated_at);
 }
 
 export async function fullSync(userId: string) {
@@ -123,8 +123,14 @@ export function subscribeToRealtime(userId: string) {
         filter: `user_id=eq.${userId}`,
       },
       async (payload) => {
-        const row = payload.new as SupabaseTask;
+        const eventType = payload.eventType;
+        const row = (payload.new ?? payload.old) as SupabaseTask;
         if (!row?.id) return;
+
+        if (eventType === "DELETE") {
+          await db.tasks.delete(row.id);
+          return;
+        }
 
         const local = await db.tasks.get(row.id);
         if (!local || (new Date(row.updated_at) > new Date(local.updatedAt) && !local.pendingSync)) {

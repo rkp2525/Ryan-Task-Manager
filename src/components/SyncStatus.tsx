@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { fullSync, subscribeToRealtime, unsubscribeFromRealtime } from "@/lib/sync";
 
@@ -9,9 +9,11 @@ export default function SyncStatus() {
   const [online, setOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
+  const syncingRef = useRef(false);
 
   const doSync = useCallback(async () => {
-    if (!user || syncing) return;
+    if (!user || syncingRef.current) return;
+    syncingRef.current = true;
     setSyncing(true);
     try {
       await fullSync(user.id);
@@ -19,9 +21,10 @@ export default function SyncStatus() {
     } catch (e) {
       console.error("Sync error:", e);
     } finally {
+      syncingRef.current = false;
       setSyncing(false);
     }
-  }, [user, syncing]);
+  }, [user]);
 
   useEffect(() => {
     setOnline(navigator.onLine);
