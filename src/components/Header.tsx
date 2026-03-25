@@ -1,6 +1,7 @@
 "use client";
 
 import ModeToggle from "./ModeToggle";
+import DarkModeToggle from "./DarkModeToggle";
 import { useMode } from "@/providers/ModeProvider";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -19,8 +20,9 @@ export default function Header() {
             {mode === "personal" ? "Personal Tasks" : "Work Tasks"}
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <ModeToggle />
+          <DarkModeToggle />
           {user && (
             <button
               onClick={signOut}
