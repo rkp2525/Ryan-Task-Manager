@@ -147,6 +147,7 @@ export default function TaskItem({
         }
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
+        document.removeEventListener("keydown", handleKeyDown);
       };
 
       const handleKeyDown = (ev: KeyboardEvent) => {
