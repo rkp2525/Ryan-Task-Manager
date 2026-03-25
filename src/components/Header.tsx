@@ -2,9 +2,11 @@
 
 import ModeToggle from "./ModeToggle";
 import { useMode } from "@/providers/ModeProvider";
+import { useAuth } from "@/providers/AuthProvider";
 
 export default function Header() {
   const { mode } = useMode();
+  const { user, signOut } = useAuth();
 
   return (
     <header className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
@@ -17,7 +19,18 @@ export default function Header() {
             {mode === "personal" ? "Personal Tasks" : "Work Tasks"}
           </p>
         </div>
-        <ModeToggle />
+        <div className="flex items-center gap-4">
+          <ModeToggle />
+          {user && (
+            <button
+              onClick={signOut}
+              className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+              title={user.email}
+            >
+              Sign Out
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );
