@@ -108,3 +108,33 @@ export async function makeSticky(id: string, x: number, y: number) {
 export async function removeSticky(id: string) {
   await db.tasks.update(id, { isSticky: false, stickyX: undefined, stickyY: undefined, updatedAt: new Date().toISOString(), pendingSync: true });
 }
+
+export async function reorderTasks(mode: Mode, taskId: string, newIndex: number) {
+  // Get all active (non-deleted, non-done) tasks for this mode, sorted by sortOrder
+  const tasks = await db.tasks
+    .where("mode")
+    .equals(mode)
+    .filter((t) => !t.deletedAt && t.status !== "done")
+    .sortBy("sortOrder");
+
+  const oldIndex = tasks.findIndex((t) => t.id === taskId);
+  if (oldIndex === -1 || oldIndex === newIndex) return;
+
+  // Remove task from old position and insert at new position
+  const [movedTask] = tasks.splice(oldIndex, 1);
+  tasks.splice(newIndex, 0, movedTask);
+
+  // Update sortOrder for all affected tasks
+  const now = new Date().toISOString();
+  await db.transaction("rw", db.tasks, async () => {
+    for (let i = 0; i < tasks.length; i++) {
+      if (tasks[i].sortOrder !== i) {
+        await db.tasks.update(tasks[i].id, {
+          sortOrder: i,
+          updatedAt: now,
+          pendingSync: true,
+        });
+      }
+    }
+  });
+}

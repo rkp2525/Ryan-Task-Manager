@@ -1,19 +1,67 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useMode } from "@/providers/ModeProvider";
-import { useTasks } from "@/lib/hooks";
+import { useTasks, reorderTasks } from "@/lib/hooks";
 import TaskItem from "./TaskItem";
+
+interface DragState {
+  taskId: string;
+  startIndex: number;
+}
 
 export default function TaskList() {
   const { mode } = useMode();
   const { activeTasks, doneTasks } = useTasks(mode);
   const [showDone, setShowDone] = useState(false);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const handleDragStart = useCallback((taskId: string, index: number) => {
+    setDragState({ taskId, startIndex: index });
+    setDropIndex(index);
+  }, []);
+
+  const handleDragMove = useCallback((clientY: number) => {
+    if (!listRef.current || !dragState) return;
+
+    const taskElements = listRef.current.querySelectorAll("[data-task-item]");
+    
+    let newDropIndex = activeTasks.length;
+    
+    for (let i = 0; i < taskElements.length; i++) {
+      const rect = taskElements[i].getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      
+      if (clientY < midpoint) {
+        newDropIndex = i;
+        break;
+      }
+    }
+    
+    setDropIndex(newDropIndex);
+  }, [dragState, activeTasks.length]);
+
+  const handleDragEnd = useCallback(async () => {
+    if (dragState && dropIndex !== null && dropIndex !== dragState.startIndex) {
+      // Adjust target index if moving down (since the dragged item will be removed first)
+      const targetIndex = dropIndex > dragState.startIndex ? dropIndex - 1 : dropIndex;
+      await reorderTasks(mode, dragState.taskId, targetIndex);
+    }
+    setDragState(null);
+    setDropIndex(null);
+  }, [dragState, dropIndex, mode]);
+
+  const handleDragCancel = useCallback(() => {
+    setDragState(null);
+    setDropIndex(null);
+  }, []);
 
   return (
     <div>
       {/* Active tasks */}
-      <div className="space-y-2">
+      <div ref={listRef} className="space-y-2">
         {activeTasks.length === 0 && (
           <div className="py-12 text-center">
             <p className="text-gray-400 dark:text-gray-500">
@@ -21,9 +69,27 @@ export default function TaskList() {
             </p>
           </div>
         )}
-        {activeTasks.map((task) => (
-          <TaskItem key={task.id} task={task} />
+        {activeTasks.map((task, index) => (
+          <div key={task.id} data-task-item>
+            {/* Drop indicator before this task */}
+            {dragState && dropIndex === index && dropIndex !== dragState.startIndex && (
+              <div className="mb-2 h-1 rounded bg-indigo-500 transition-all" />
+            )}
+            <TaskItem
+              task={task}
+              index={index}
+              isDragging={dragState?.taskId === task.id}
+              onDragStart={handleDragStart}
+              onDragMove={handleDragMove}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+            />
+          </div>
         ))}
+        {/* Drop indicator at end of list */}
+        {dragState && dropIndex === activeTasks.length && dropIndex !== dragState.startIndex && (
+          <div className="mt-2 h-1 rounded bg-indigo-500 transition-all" />
+        )}
       </div>
 
       {/* Completed tasks */}

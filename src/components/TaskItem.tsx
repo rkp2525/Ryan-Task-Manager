@@ -6,12 +6,31 @@ import { PRIORITY_COLORS, PRIORITY_LABELS, type Task, type Priority } from "@/li
 
 const DRAG_THRESHOLD = 50; // pixels before it becomes a sticky
 
-export default function TaskItem({ task }: { task: Task }) {
+interface TaskItemProps {
+  task: Task;
+  index?: number;
+  isDragging?: boolean;
+  onDragStart?: (taskId: string, index: number) => void;
+  onDragMove?: (clientY: number) => void;
+  onDragEnd?: () => void;
+  onDragCancel?: () => void;
+}
+
+export default function TaskItem({
+  task,
+  index,
+  isDragging = false,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  onDragCancel,
+}: TaskItemProps) {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
-  const [dragging, setDragging] = useState(false);
+  const [stickyDragging, setStickyDragging] = useState(false);
   const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(null);
   const dragRef = useRef<{ startX: number; startY: number; active: boolean } | null>(null);
+  const reorderDragRef = useRef<boolean>(false);
   const cleanupRef = useRef<(() => void) | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const isDone = task.status === "done";
@@ -60,10 +79,11 @@ export default function TaskItem({ task }: { task: Task }) {
     };
   };
 
+  // Handler for dragging task to make it a sticky note (original behavior)
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      // Don't start drag from buttons or inputs
-      if ((e.target as HTMLElement).closest("button, input, textarea")) return;
+      // Don't start drag from buttons, inputs, or the drag handle
+      if ((e.target as HTMLElement).closest("button, input, textarea, [data-drag-handle]")) return;
       if (editing) return;
 
       dragRef.current = { startX: e.clientX, startY: e.clientY, active: false };
@@ -76,7 +96,7 @@ export default function TaskItem({ task }: { task: Task }) {
 
         if (dist > DRAG_THRESHOLD) {
           dragRef.current.active = true;
-          setDragging(true);
+          setStickyDragging(true);
           setGhostPos({ x: ev.clientX - 96, y: ev.clientY - 24 });
         }
       };
@@ -89,7 +109,7 @@ export default function TaskItem({ task }: { task: Task }) {
         }
         dragRef.current = null;
         cleanupRef.current = null;
-        setDragging(false);
+        setStickyDragging(false);
         setGhostPos(null);
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
@@ -105,21 +125,81 @@ export default function TaskItem({ task }: { task: Task }) {
     [task.id, editing]
   );
 
+  // Handler for drag handle to reorder tasks within the list
+  const handleReorderMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (index === undefined || !onDragStart || !onDragMove || !onDragEnd) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      reorderDragRef.current = true;
+      onDragStart(task.id, index);
+
+      const handleMouseMove = (ev: MouseEvent) => {
+        if (!reorderDragRef.current) return;
+        onDragMove(ev.clientY);
+      };
+
+      const handleMouseUp = () => {
+        if (reorderDragRef.current) {
+          reorderDragRef.current = false;
+          onDragEnd();
+        }
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+
+      const handleKeyDown = (ev: KeyboardEvent) => {
+        if (ev.key === "Escape") {
+          reorderDragRef.current = false;
+          onDragCancel?.();
+          document.removeEventListener("mousemove", handleMouseMove);
+          document.removeEventListener("mouseup", handleMouseUp);
+          document.removeEventListener("keydown", handleKeyDown);
+        }
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("keydown", handleKeyDown);
+
+      cleanupRef.current = () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        document.removeEventListener("keydown", handleKeyDown);
+      };
+    },
+    [task.id, index, onDragStart, onDragMove, onDragEnd, onDragCancel]
+  );
+
+  const isReorderingEnabled = index !== undefined && onDragStart && onDragMove && onDragEnd;
+
   return (
     <>
       <div
         ref={rowRef}
         onMouseDown={handleMouseDown}
         className={`group flex cursor-grab items-center gap-3 rounded-lg border px-4 py-3 transition-colors active:cursor-grabbing ${
-          dragging ? "opacity-50" : ""
+          stickyDragging || isDragging ? "opacity-50" : ""
+        } ${
+          isDragging ? "ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-gray-900" : ""
         } ${
           isDone
             ? "border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50"
             : "border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
         }`}
       >
-        {/* Drag handle */}
-        <span className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300" title="Drag to make sticky note">
+        {/* Drag handle for reordering */}
+        <span
+          data-drag-handle
+          onMouseDown={isReorderingEnabled ? handleReorderMouseDown : undefined}
+          className={`text-gray-400 ${
+            isReorderingEnabled
+              ? "cursor-grab hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 active:cursor-grabbing"
+              : "dark:text-gray-500"
+          }`}
+          title={isReorderingEnabled ? "Drag to reorder" : "Drag to make sticky note"}
+        >
           <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
             <circle cx="9" cy="4" r="2" />
             <circle cx="15" cy="4" r="2" />
@@ -202,8 +282,8 @@ export default function TaskItem({ task }: { task: Task }) {
         </div>
       </div>
 
-      {/* Drag ghost */}
-      {dragging && ghostPos && (
+      {/* Drag ghost for sticky note conversion */}
+      {stickyDragging && ghostPos && (
         <div
           className="pointer-events-none fixed z-50 w-48 rounded-lg border-2 border-yellow-300 bg-yellow-200 p-3 shadow-lg opacity-80"
           style={{ left: ghostPos.x, top: ghostPos.y }}
