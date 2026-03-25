@@ -9,6 +9,7 @@ import TaskList from "@/components/TaskList";
 import InstallButton from "@/components/InstallButton";
 import SyncStatus from "@/components/SyncStatus";
 import StickyNotesLayer from "@/components/StickyNotesLayer";
+import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -40,6 +41,7 @@ export default function Home() {
       </main>
       <StickyNotesLayer />
       <InstallButton />
+      <KeyboardShortcuts />
     </div>
   );
 }
