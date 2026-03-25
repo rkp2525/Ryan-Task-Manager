@@ -102,9 +102,9 @@ export async function setStickyPosition(id: string, x: number, y: number) {
 }
 
 export async function makeSticky(id: string, x: number, y: number) {
-  await db.tasks.update(id, { isSticky: true, stickyX: x, stickyY: y });
+  await db.tasks.update(id, { isSticky: true, stickyX: x, stickyY: y, updatedAt: new Date().toISOString(), pendingSync: true });
 }
 
 export async function removeSticky(id: string) {
-  await db.tasks.update(id, { isSticky: false, stickyX: undefined, stickyY: undefined });
+  await db.tasks.update(id, { isSticky: false, stickyX: undefined, stickyY: undefined, updatedAt: new Date().toISOString(), pendingSync: true });
 }

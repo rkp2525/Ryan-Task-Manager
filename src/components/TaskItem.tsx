@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { toggleTaskStatus, updateTask, makeSticky } from "@/lib/hooks";
 import { PRIORITY_COLORS, PRIORITY_LABELS, type Task, type Priority } from "@/lib/types";
 
@@ -12,8 +12,14 @@ export default function TaskItem({ task }: { task: Task }) {
   const [dragging, setDragging] = useState(false);
   const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(null);
   const dragRef = useRef<{ startX: number; startY: number; active: boolean } | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const isDone = task.status === "done";
+
+  // Clean up drag listeners on unmount
+  useEffect(() => {
+    return () => { cleanupRef.current?.(); };
+  }, []);
 
   const handleToggle = () => toggleTaskStatus(task.id, task.status);
 
@@ -82,6 +88,7 @@ export default function TaskItem({ task }: { task: Task }) {
           makeSticky(task.id, Math.max(0, x), Math.max(0, y));
         }
         dragRef.current = null;
+        cleanupRef.current = null;
         setDragging(false);
         setGhostPos(null);
         document.removeEventListener("mousemove", handleMouseMove);
@@ -90,6 +97,10 @@ export default function TaskItem({ task }: { task: Task }) {
 
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
+      cleanupRef.current = () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
     },
     [task.id, editing]
   );
