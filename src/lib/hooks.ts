@@ -109,6 +109,47 @@ export async function removeSticky(id: string) {
   await db.tasks.update(id, { isSticky: false, stickyX: undefined, stickyY: undefined, updatedAt: new Date().toISOString(), pendingSync: true });
 }
 
+export function useTasksByStatus(mode: Mode) {
+  const todoTasks = useLiveQuery(
+    () =>
+      db.tasks
+        .where("mode")
+        .equals(mode)
+        .filter((t) => !t.deletedAt && t.status === "todo")
+        .sortBy("sortOrder"),
+    [mode],
+    []
+  );
+
+  const inProgressTasks = useLiveQuery(
+    () =>
+      db.tasks
+        .where("mode")
+        .equals(mode)
+        .filter((t) => !t.deletedAt && t.status === "in_progress")
+        .sortBy("sortOrder"),
+    [mode],
+    []
+  );
+
+  const doneTasks = useLiveQuery(
+    () =>
+      db.tasks
+        .where("mode")
+        .equals(mode)
+        .filter((t) => !t.deletedAt && t.status === "done")
+        .sortBy("updatedAt"),
+    [mode],
+    []
+  );
+
+  return { todoTasks, inProgressTasks, doneTasks };
+}
+
+export async function moveTaskToStatus(id: string, newStatus: TaskStatus) {
+  await updateTask(id, { status: newStatus });
+}
+
 export async function reorderTasks(mode: Mode, taskId: string, newIndex: number) {
   // Get all active (non-deleted, non-done) tasks for this mode, sorted by sortOrder
   const tasks = await db.tasks
