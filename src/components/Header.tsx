@@ -2,6 +2,7 @@
 
 import ModeToggle from "./ModeToggle";
 import DarkModeToggle from "./DarkModeToggle";
+import ViewToggle from "./ViewToggle";
 import { useMode } from "@/providers/ModeProvider";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -11,7 +12,7 @@ export default function Header() {
 
   return (
     <header className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-      <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">
             Task Manager
@@ -21,6 +22,7 @@ export default function Header() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <ViewToggle />
           <ModeToggle />
           <DarkModeToggle />
           {user && (

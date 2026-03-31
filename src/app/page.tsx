@@ -3,9 +3,11 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
+import { useView } from "@/providers/ViewProvider";
 import Header from "@/components/Header";
 import TaskForm from "@/components/TaskForm";
 import TaskList from "@/components/TaskList";
+import KanbanBoard from "@/components/KanbanBoard";
 import InstallButton from "@/components/InstallButton";
 import SyncStatus from "@/components/SyncStatus";
 import StickyNotesLayer from "@/components/StickyNotesLayer";
@@ -13,6 +15,7 @@ import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 
 export default function Home() {
   const { user, loading } = useAuth();
+  const { view } = useView();
   const router = useRouter();
 
   useEffect(() => {
@@ -34,10 +37,10 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       <Header />
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      <main className={`mx-auto px-4 py-8 ${view === "kanban" ? "max-w-5xl" : "max-w-3xl"}`}>
         <SyncStatus />
         <TaskForm />
-        <TaskList />
+        {view === "kanban" ? <KanbanBoard /> : <TaskList />}
       </main>
       <StickyNotesLayer />
       <InstallButton />

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { ModeProvider } from "@/providers/ModeProvider";
+import { ViewProvider } from "@/providers/ViewProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
 import "./globals.css";
 
@@ -38,7 +39,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100">
         <AuthProvider>
-          <ModeProvider>{children}</ModeProvider>
+          <ModeProvider><ViewProvider>{children}</ViewProvider></ModeProvider>
         </AuthProvider>
       </body>
     </html>
